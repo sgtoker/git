@@ -1850,6 +1850,10 @@ static pid_t mingw_spawnve_fd(const char *cmd, const char **argv, char **deltaen
 	/* Make sure to override previous errors, if any */
 	errno = 0;
 
+	if (dir && !is_directory(dir))
+		return error_errno(_("could not exec '%s' in '%s'"),
+				   argv[0], dir);
+
 	if (restrict_handle_inheritance < 0)
 		restrict_handle_inheritance = core_restrict_inherited_handles;
 	/*
