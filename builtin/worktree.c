@@ -1030,6 +1030,16 @@ static int remove_worktree(int ac, const char **av, const char *prefix)
 	return ret;
 }
 
+static void repair_cb(int iserr, const char *path, const char *msg, void *cb_data)
+{
+	if (!iserr)
+		printf_ln(_("repair: %s: %s"), msg, path);
+	else {
+		fprintf_ln(stderr, _("error: %s: %s"), msg, path);
+		*(int *)cb_data = 1;
+	}
+}
+
 static int repair(int ac, const char **av, const char *prefix)
 {
 	struct option options[] = {
@@ -1040,6 +1050,7 @@ static int repair(int ac, const char **av, const char *prefix)
 	ac = parse_options(ac, av, prefix, options, worktree_usage, 0);
 	if (ac)
 		usage_with_options(worktree_usage, options);
+	repair_worktrees(repair_cb, &rc);
 	return rc;
 }
 

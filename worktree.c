@@ -571,3 +571,56 @@ int other_head_refs(each_ref_fn fn, void *cb_data)
 	free_worktrees(worktrees);
 	return ret;
 }
+
+/*
+ * Repair worktree's /path/to/worktree/.git link if missing, corrupt, or not
+ * pointing at <repo>/worktrees/<id>.
+ */
+static void repair_dotgit(struct worktree *wt,
+			  worktree_repair_cb *cb, void *cb_data)
+{
+	struct strbuf dotgit = STRBUF_INIT;
+	struct strbuf repo = STRBUF_INIT;
+	char *backlink;
+	const char *repair = NULL;
+	int err;
+
+	/* missing worktree can't be repaired */
+	if (!file_exists(wt->path))
+		return;
+
+	strbuf_realpath(&repo, git_common_path("worktrees/%s", wt->id), 1);
+	strbuf_addf(&dotgit, "%s/.git", wt->path);
+	backlink = xstrdup_or_null(read_gitfile_gently(dotgit.buf, &err));
+
+	if (err == READ_GITFILE_ERR_NOT_A_FILE)
+		cb(1, wt->path, _(".git is not a file"), cb_data);
+	else if (err)
+		repair = _(".git link broken");
+	else if (fspathcmp(backlink, repo.buf))
+		repair = _(".git link incorrect");
+
+	if (repair) {
+		cb(0, wt->path, repair, cb_data);
+		write_file(dotgit.buf, "gitdir: %s", repo.buf);
+	}
+
+	free(backlink);
+	strbuf_release(&repo);
+	strbuf_release(&dotgit);
+}
+
+static void repair_noop_cb(int iserr, const char *path, const char *msg,
+			   void *cb_data) {}
+
+void repair_worktrees(worktree_repair_cb *cb, void *cb_data)
+{
+	struct worktree **worktrees = get_worktrees();
+	struct worktree **wt = worktrees + 1; /* +1 skips main worktree */
+
+	if (!cb)
+		cb = repair_noop_cb;
+	for (; *wt; wt++)
+		repair_dotgit(*wt, cb, cb_data);
+	free_worktrees(worktrees);
+}
