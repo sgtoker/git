@@ -628,16 +628,16 @@ void repair_worktrees(worktree_repair_cb *cb, void *cb_data)
 static int is_main_worktree_path(const char *path)
 {
 	struct strbuf target = STRBUF_INIT;
-	struct strbuf main = STRBUF_INIT;
+	struct strbuf main_worktree = STRBUF_INIT;
 	int cmp;
 
 	strbuf_add_real_path(&target, path);
 	strbuf_strip_suffix(&target, "/.git");
-	strbuf_add_real_path(&main, get_git_common_dir());
-	strbuf_strip_suffix(&main, "/.git");
-	cmp = fspathcmp(main.buf, target.buf);
+	strbuf_add_real_path(&main_worktree, get_git_common_dir());
+	strbuf_strip_suffix(&main_worktree, "/.git");
+	cmp = fspathcmp(main_worktree.buf, target.buf);
 
-	strbuf_release(&main);
+	strbuf_release(&main_worktree);
 	strbuf_release(&target);
 	return !cmp;
 }
